@@ -45,7 +45,7 @@ type Msg
     | AmountInput String
     | SaveExpense
     | DeleteExpense Int
-   {-} | EditExpense -}
+    | EditExpense Expense
 
 
 update : Msg -> Model -> Model
@@ -61,15 +61,43 @@ update msg model =
             { model | amount = amount }
 
         SaveExpense ->
-            { model 
-                | expenses = model.expenses ++ [{ id = model.nextId, description = model.description, amount = String.toFloat(model.amount) }]
-                , description = ""
-                , amount = "0"
-                , nextId = model.nextId + 1
-            }
+            case model.editId of
+                -- Add new expense
+                Nothing ->
+                    { model 
+                        | expenses = model.expenses ++ [{ id = model.nextId, description = model.description, amount = String.toFloat(model.amount) }]
+                        , description = ""
+                        , amount = "0"
+                        , nextId = model.nextId + 1
+                        , showForm = False
+                    }
+
+                -- Modify existing expense
+                Just editId ->
+                    { model 
+                        | expenses = model.expenses 
+                            |> List.map (\expense ->
+                                if expense.id == editId then
+                                    { expense | description = model.description, amount = String.toFloat(model.amount)}
+                                else
+                                    expense
+                                )
+                        , description = ""
+                        , amount = "0"
+                        , editId = Nothing
+                        , showForm = False
+                    }
 
         DeleteExpense id ->
-            { model | expenses = List.filter (\expense -> expense.id /= id) model.expenses }    
+            { model | expenses = List.filter (\expense -> expense.id /= id) model.expenses }
+
+        EditExpense expense ->
+            { model
+                | editId = Just expense.id
+                , description = expense.description
+                , amount = String.fromFloat (Maybe.withDefault 0 expense.amount)
+                , showForm = True
+            }  
         
 -- VIEW
 viewForm : Model -> Html Msg
@@ -132,7 +160,10 @@ toTableRow expense =
     tr []
         [ td [] [ text expense.description ]
         , td [] [ text (String.fromFloat (Maybe.withDefault 0 expense.amount)) ]
-        , td [] [ button [ onClick (DeleteExpense expense.id) ] [ text "-"] ]
+        , td [] 
+            [ button [ onClick (DeleteExpense expense.id) ] [ text "-"] 
+            , button [ onClick (EditExpense expense) ] [ text "Edit"] 
+            ]
         ]
 
 
