@@ -14,7 +14,7 @@ main =
 
 type alias Model = 
     { description: String
-    , amount: Int
+    , amount: String
     , showForm: Bool
     , nextId: Int
     , editId: Maybe Int
@@ -25,26 +25,26 @@ type alias Model =
 type alias Expense = 
     { id: Int
     , description: String
-    , amount: Int
+    , amount: Maybe Float
     }
 
 init: Model
 init = 
     { description = ""
-    , amount = 0
+    , amount = "0"
     , showForm = False
-    , nextId = 0
+    , nextId = 2
     , editId = Nothing
-    , expenses = []
+    , expenses = [{ id = 1, description = "Food", amount = Just 25.0 }]
     }
 
 
 type Msg
     = ShowForm
     | DescriptionInput String
-    | AmountInput Int
-   {-} | SaveExpense String Int
-    | DeleteExpense
+    | AmountInput String
+    | SaveExpense
+    {- | DeleteExpense
     | EditExpense -}
 
 
@@ -60,17 +60,25 @@ update msg model =
         AmountInput amount ->
             { model | amount = amount }
 
+        SaveExpense ->
+            { model 
+                | expenses = model.expenses ++ [{ id = model.nextId, description = model.description, amount = String.toFloat(model.amount) }]
+                , description = ""
+                , amount = "0"
+                , nextId = model.nextId + 1
+            }
         
 -- VIEW
 viewForm : Model -> Html Msg
 viewForm model = 
     if model.showForm then
-        Html.form []
+        Html.form [onSubmit SaveExpense]
             [ div []
                 [ input 
                     [ type_ "text"
                     , placeholder "Put the description here"
                     , value model.description
+                    , onInput DescriptionInput
                     ]
                     []
                 ]
@@ -78,7 +86,8 @@ viewForm model =
                 [ input 
                     [ type_ "number"
                     , placeholder "Put the amount here"
-                    , value (String.fromInt model.amount)
+                    , value model.amount
+                    , onInput AmountInput
                     ]
                     []
                 ]
@@ -90,7 +99,47 @@ viewForm model =
             [ button [ onClick ShowForm ] [ text "Add an expense" ] ]
 
 
+viewExpenses: Model -> Html Msg
+viewExpenses model =
+    div []
+        [ table []
+            [ thead []
+                [ tr []
+                    [ th [] [ text "Expense" ]
+                    , th [] [ text "Amount" ]
+                    ]
+                ] 
+            , tbody [] 
+              ( []
+                ++ List.map toTableRow model.expenses
+                ++ [
+                    tr []
+                        [ th [] [ text "Total"]
+                        , th [] [ text (model.expenses |> calcTotal |> String.fromFloat)]
+                        ]
+                ]
+              )
+            ]
+        ]
+
+
+toTableRow : Expense -> Html Msg
+toTableRow expense =
+    tr []
+        [ td [] [ text expense.description ]
+        , td [] [ text (String.fromFloat (Maybe.withDefault 0 expense.amount)) ]
+        ]
+
+
+calcTotal : List Expense -> Float
+calcTotal expenses =
+    expenses
+      |> List.map (\n -> Maybe.withDefault 0 n.amount)
+      |> List.foldl (+) 0
+
 view : Model -> Html Msg
 view model =
     div []
-        [ viewForm model ]
+        [ viewForm model
+        , viewExpenses model
+        ]
