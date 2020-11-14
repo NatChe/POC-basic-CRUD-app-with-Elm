@@ -44,8 +44,8 @@ type Msg
     | DescriptionInput String
     | AmountInput String
     | SaveExpense
-    {- | DeleteExpense
-    | EditExpense -}
+    | DeleteExpense Int
+   {-} | EditExpense -}
 
 
 update : Msg -> Model -> Model
@@ -67,6 +67,9 @@ update msg model =
                 , amount = "0"
                 , nextId = model.nextId + 1
             }
+
+        DeleteExpense id ->
+            { model | expenses = List.filter (\expense -> expense.id /= id) model.expenses }    
         
 -- VIEW
 viewForm : Model -> Html Msg
@@ -107,6 +110,7 @@ viewExpenses model =
                 [ tr []
                     [ th [] [ text "Expense" ]
                     , th [] [ text "Amount" ]
+                    , th [] [ text ""]
                     ]
                 ] 
             , tbody [] 
@@ -128,6 +132,7 @@ toTableRow expense =
     tr []
         [ td [] [ text expense.description ]
         , td [] [ text (String.fromFloat (Maybe.withDefault 0 expense.amount)) ]
+        , td [] [ button [ onClick (DeleteExpense expense.id) ] [ text "-"] ]
         ]
 
 
